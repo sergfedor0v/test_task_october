@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.AfterSuite;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
@@ -23,9 +24,9 @@ public class TestBase {
     protected VkApiClient vk;
     protected UserActor userActor;
     protected Logger logger = LoggerFactory.getLogger(TestBase.class);
-    @BeforeSuite
+    @BeforeClass(alwaysRun = true)
     @Step("Create vk client and user actor objects")
-    public void beforeSuite(){
+    public void beforeClass(){
         userActor = getUserActor();
         vk = createApiClient();
     }
@@ -43,11 +44,20 @@ public class TestBase {
         return new UserActor(userId, userAccessToken);
     }
 
+    public <T> T performRequest(AbstractQueryBuilder query) throws ClientException, ApiException, InterruptedException {
+        logger.info("Sending request without error validation");
+        Thread.sleep(350); //sleep to avoid ToManyRequests error while running the whole suite
+        Object response = query.execute();
+        logger.info("Response successfully returned");
+        return (T) response;
+    }
+
     public <T> T testRequest(AbstractQueryBuilder query, TestData testData) {
         logger.info("Sending test request via VK API");
-        Allure.step("Send request to VK ");
+        Allure.step("Send test request to VK ");
         Object response = null;
         try {
+            Thread.sleep(350); //sleep to avoid ToManyRequests error while running the whole suite
             response = query.execute();
             logger.info("Response successfully returned");
         } catch (ApiException e) {
@@ -64,6 +74,8 @@ public class TestBase {
             }
         } catch (ClientException e) {
             Assert.fail("Unexpected client exception occurred. " + e.getMessage());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         Allure.addAttachment("Returned response", response.toString());
 

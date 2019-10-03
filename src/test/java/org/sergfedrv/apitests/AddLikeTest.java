@@ -19,12 +19,14 @@ public class AddLikeTest extends TestBase {
 
     private int testNoteItemId;
 
-    @BeforeClass
+    @BeforeClass(groups = {"likes.add"})
     @Step("Create new note for tests")
-    public void createNoteForLike() throws ClientException, ApiException {
-        testNoteItemId = vk.notes().add(userActor,
+    public void createNoteForLike() throws ClientException, ApiException, InterruptedException {
+        super.beforeClass();
+        logger.info("AddLikeTest beforeClass");
+        testNoteItemId = performRequest(vk.notes().add(userActor,
                 "TestNote",
-                "This is note for testing purposes").execute();
+                "This is note for testing purposes"));
     }
 
     @DataProvider
@@ -65,8 +67,8 @@ public class AddLikeTest extends TestBase {
         };
     }
 
-    @Test(dataProvider = "addLikesTestDataProvider")
-    @Description("Check that it is possible to add like via API")
+    @Test(dataProvider = "addLikesTestDataProvider", groups = {"likes.add"})
+    @Description("Check likes.add method")
     public void addLikesTest(TestData testData) throws Exception {
         Allure.description(testData.getTestDescription());
         LikesAddQuery testQuery = createQuery(testData);

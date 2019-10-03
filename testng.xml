@@ -1,8 +1,11 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd" >
 <suite name="VK LIKES test task" verbose="1" >
-    <test name="Tests for checking VK likes api methods">
+    <test name="Tests for checking VK likes api methods" parallel="false">
         <classes>
+            <class name="org.sergfedrv.apitests.GetLikesListTest"/>
             <class name="org.sergfedrv.apitests.AddLikeTest"/>
+            <class name="org.sergfedrv.apitests.DeleteLikeTest"/>
+            <class name="org.sergfedrv.apitests.IsLikedTest"/>
         </classes>
     </test>
 </suite>
