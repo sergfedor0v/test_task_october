@@ -1,0 +1,77 @@
+package org.sergfedrv.apitests;
+
+import com.vk.api.sdk.client.AbstractQueryBuilder;
+import com.vk.api.sdk.client.TransportClient;
+import com.vk.api.sdk.client.VkApiClient;
+import com.vk.api.sdk.client.actors.UserActor;
+import com.vk.api.sdk.exceptions.ApiException;
+import com.vk.api.sdk.exceptions.ClientException;
+import com.vk.api.sdk.httpclient.HttpTransportClient;
+import io.qameta.allure.Allure;
+import io.qameta.allure.Step;
+import org.sergfedrv.testdata.TestData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testng.Assert;
+import org.testng.annotations.AfterSuite;
+import org.testng.annotations.BeforeSuite;
+import org.testng.annotations.Test;
+
+@Test
+public class TestBase {
+
+    protected VkApiClient vk;
+    protected UserActor userActor;
+    protected Logger logger = LoggerFactory.getLogger(TestBase.class);
+    @BeforeSuite
+    @Step("Create vk client and user actor objects")
+    public void beforeSuite(){
+        userActor = getUserActor();
+        vk = createApiClient();
+    }
+
+    private VkApiClient createApiClient(){
+        logger.info("Creation of new VK API client");
+        TransportClient transportClient = HttpTransportClient.getInstance();
+        return new VkApiClient(transportClient);
+    }
+
+    private UserActor getUserActor(){
+        logger.info("Creation of test user");
+        int userId = Integer.parseInt(System.getProperty("vk.testUser.userId"));
+        String userAccessToken = System.getProperty("vk.testUser.accessKey");
+        return new UserActor(userId, userAccessToken);
+    }
+
+    public <T> T testRequest(AbstractQueryBuilder query, TestData testData) {
+        logger.info("Sending test request via VK API");
+        Allure.step("Send request to VK ");
+        Object response = null;
+        try {
+            response = query.execute();
+            logger.info("Response successfully returned");
+        } catch (ApiException e) {
+            if (testData.getExpectedErrorMessage() != null) {
+                logger.info("Exception returned. Comparing returned exception message with expected");
+                Allure.step("Check that returned exception message is equal to expected");
+                Allure.addAttachment("Actual error message", e.getMessage());
+                Assert.assertEquals(e.getMessage(), testData.getExpectedErrorMessage(), "Expected and actual error messages are different");
+                logger.info("Check passed");
+                return null;
+            } else{
+                logger.error("Unexpected API exception returned");
+                Assert.fail("Unexpected API exception occurred. " + e.getMessage());
+            }
+        } catch (ClientException e) {
+            Assert.fail("Unexpected client exception occurred. " + e.getMessage());
+        }
+        Allure.addAttachment("Returned response", response.toString());
+
+        return (T) response;
+    }
+
+    @AfterSuite
+    public void afterSuite(){
+
+    }
+}
