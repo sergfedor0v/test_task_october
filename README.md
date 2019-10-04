@@ -3,7 +3,7 @@ Autotests for API methods of vk.com social network
 
 USAGE
 
-1. Create API token via implicit flow (https://vk.com/dev/implicit_flow_user)
+1. Create API token for test user via implicit flow (https://vk.com/dev/implicit_flow_user)
 
 2. Run all tests - mvn mvn clean test -Dvk.testUser.userId=testuserid -Dvk.testUser.accessKey=acces_key
 
