@@ -8,6 +8,7 @@ public class TestData {
     public static Integer PRIVATE_PROFILE_USER_ID = 12438100; //closed vk profile ID
 
     public static Integer OPENED_POST_ID = 5;
+    public static Integer OPENED_PHOTO_ID = 457239019;
     public static Integer CLOSED_PHOTO_ID = 456239017;
     private Integer userId;
     private LikesType likesType;

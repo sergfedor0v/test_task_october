@@ -15,19 +15,18 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.util.UUID;
+
 @Test
 public class IsLikedTest extends TestBase {
 
     private Integer testNoteItemId;
 
     @BeforeClass(groups = {"likes.isLiked"})
-    @Step("Create test note item on behalf of test user and like it by test user")
+    @Step("Like post of opened user")
     public void addLikes() throws ClientException, ApiException, InterruptedException {
         logger.info("IsLikedTest beforeClass");
-        testNoteItemId = performRequest(vk.notes().add(userActor,
-                "TestNote",
-                "This is note for testing purposes"));
-        performRequest(vk.likes().add(userActor, LikesType.NOTE, testNoteItemId));
+        performRequest(vk.likes().add(userActor, LikesType.POST, TestData.OPENED_POST_ID).ownerId(TestData.OPENED_PROFILE_USER_ID));
     }
 
     @DataProvider
@@ -35,34 +34,45 @@ public class IsLikedTest extends TestBase {
         return new Object[][]{
                 {
                         TestData.builder()
-                                .withDescription("Check that when user like his own item, than isLiked request for this user should return true")
-                                .withItemId(testNoteItemId)
-                                .withLikesType(LikesType.NOTE)
+                                .withDescription("Check that if user like post, isLiked request should return true if request parameter userId == testUserId")
+                                .withItemId(TestData.OPENED_POST_ID)
+                                .withLikesType(LikesType.POST)
+                                .withOwnerId(TestData.OPENED_PROFILE_USER_ID)
                                 .build(),
-                        new ExpectedResponse(BoolInt.YES, BoolInt.NO)
+                        true
+                },
+                {
+                        TestData.builder()
+                                .withDescription("Check that if user does not like post, isLiked request should return false if request parameter userId == testUserId")
+                                .withItemId(TestData.OPENED_PHOTO_ID)
+                                .withLikesType(LikesType.PHOTO)
+                                .withOwnerId(TestData.OPENED_PROFILE_USER_ID)
+                                .build(),
+                        false
                 },
                 {
                         TestData.builder()
                                 .withDescription("Check that you can not get isLiked for private profile")
                                 .withErrorMessage("Access denied (15): Access denied: this profile is private")
-                                .withItemId(testNoteItemId)
+                                .withItemId(TestData.OPENED_POST_ID)
                                 .withLikesType(LikesType.NOTE)
                                 .withUserId(TestData.PRIVATE_PROFILE_USER_ID)
                                 .build(),
-                        null
+                        false
                 }
         };
     }
 
     @Test(dataProvider = "isLikedTestDataProvider", groups = {"likes.isLiked"})
     @Description("Check 'likes.isLiked' API method")
-    public void isLikedTest(TestData testData, ExpectedResponse expectedResponse) {
+    public void isLikedTest(TestData testData, boolean isLiked) {
         Allure.description(testData.getTestDescription());
         LikesIsLikedQuery testQuery = createQuery(testData);
         IsLikedResponse response = testRequest(testQuery, testData);
         if (response != null) {
-            Assert.assertEquals(response.isLiked(), expectedResponse.isLiked(), "response.isLiked from actual response should be equal to expected");
-            Assert.assertEquals(response.isCopied(), expectedResponse.isCopied(), "response.copied from actual response be equal to expected");
+            String errorMessage = isLiked ? "User like item " + testData.getItemId() + " , but isLiked request returned false" :
+                    "User does not like item " + testData.getItemId() + " , but isLiked request returned true";
+            Assert.assertEquals(response.isLiked(), isLiked, errorMessage);
         }
     }
 
@@ -72,23 +82,5 @@ public class IsLikedTest extends TestBase {
         if (testData.getOwnerId() != null) query.ownerId(testData.getOwnerId());
         if (testData.getUserId() != null) query.userId(testData.getUserId());
         return query;
-    }
-
-    private static class ExpectedResponse {
-        private BoolInt liked;
-        private BoolInt copied;
-
-        ExpectedResponse(BoolInt liked, BoolInt copied) {
-            this.liked = liked;
-            this.copied = copied;
-        }
-
-        private boolean isLiked() {
-            return liked == BoolInt.YES;
-        }
-
-        private boolean isCopied() {
-            return copied == BoolInt.YES;
-        }
     }
 }

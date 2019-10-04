@@ -81,9 +81,4 @@ public class TestBase {
 
         return (T) response;
     }
-
-    @AfterSuite
-    public void afterSuite(){
-
-    }
 }

@@ -16,20 +16,15 @@ import org.testng.annotations.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public class GetLikesListTest extends TestBase {
 
-    private Integer testNoteItemId;
-
     @BeforeClass(groups = {"likes.get"})
-    @Step("Create test note item on behalf of test user and like it by test user")
+    @Step("Like post of opened user.")
     public void addLikes() throws ClientException, ApiException, InterruptedException {
         logger.info("GetLikesTest beforeClass");
-        testNoteItemId = performRequest(vk.notes().add(userActor,
-                "TestNote",
-                "This is note for testing purposes"));
-        performRequest(vk.likes().add(userActor, LikesType.NOTE, testNoteItemId));
-
+        performRequest(vk.likes().add(userActor, LikesType.POST, TestData.OPENED_POST_ID).ownerId(TestData.OPENED_PROFILE_USER_ID));
     }
 
     @DataProvider
@@ -38,21 +33,10 @@ public class GetLikesListTest extends TestBase {
                 {
                         TestData.builder()
                                 .withDescription("Check that when user like item, he or she exist in getLikesList of this item")
-                                .withItemId(testNoteItemId)
-                                .withLikesType(LikesType.NOTE)
-                                .withOwnerId(userActor.getId())
-                                .build(),
-                        new ExpectedResponse(1, Collections.singletonList(userActor.getId()))
-                },
-                {
-                        TestData.builder()
-                                .withDescription("Send wrong LikeType to query and validate error message")
-                                .withErrorMessage("")
-                                .withItemId(testNoteItemId)
-                                .withLikesType(LikesType.PHOTO_COMMENT)
-                                .withOwnerId(userActor.getId())
-                                .build(),
-                        new ExpectedResponse(0, Collections.<Integer>emptyList())
+                                .withItemId(TestData.OPENED_POST_ID)
+                                .withLikesType(LikesType.POST)
+                                .withOwnerId(TestData.OPENED_PROFILE_USER_ID)
+                                .build()
                 },
                 {
                         TestData.builder()
@@ -61,21 +45,19 @@ public class GetLikesListTest extends TestBase {
                                 .withItemId(TestData.CLOSED_PHOTO_ID)
                                 .withLikesType(LikesType.PHOTO)
                                 .withOwnerId(TestData.PRIVATE_PROFILE_USER_ID)
-                                .build(),
-                        null
+                                .build()
                 }
         };
     }
 
     @Test(dataProvider = "getLikesTestDataProvider", groups = {"likes.get"})
     @Description("Check 'likes.get' API method")
-    public void getLikesTest(TestData testData, ExpectedResponse expectedResponse) {
+    public void getLikesTest(TestData testData) {
         Allure.description(testData.getTestDescription());
         LikesGetListQuery testQuery = createQuery(testData);
         GetListResponse response = testRequest(testQuery, testData);
         if (response != null) {
-            Assert.assertEquals(response.getCount(), expectedResponse.getCount(), "Counts of likes should be the same");
-            Assert.assertEquals(response.getItems(), expectedResponse.getItems(), "List of userIds should be the same");
+            Assert.assertTrue(response.getItems().contains(userActor.getId()), "If test user like something, he or she should be in getLikesList query");
         }
     }
 
@@ -86,21 +68,5 @@ public class GetLikesListTest extends TestBase {
         if (testData.getItemId() != null) testQuery.itemId(testData.getItemId());
         if (testData.getLikesGetListFilterValue() != null) testQuery.filter(testData.getLikesGetListFilterValue());
         return testQuery;
-    }
-
-    private static class ExpectedResponse{
-        private Integer count;
-        private List<Integer> items;
-
-        ExpectedResponse(int count, List<Integer> items){
-            this.count = count;
-            this.items = items;
-        }
-        private Integer getCount() {
-            return count;
-        }
-        private List<Integer> getItems() {
-            return items;
-        }
     }
 }

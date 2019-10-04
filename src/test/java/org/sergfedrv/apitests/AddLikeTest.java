@@ -2,7 +2,9 @@ package org.sergfedrv.apitests;
 
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
+import com.vk.api.sdk.objects.base.BoolInt;
 import com.vk.api.sdk.objects.likes.responses.AddResponse;
+import com.vk.api.sdk.objects.likes.responses.IsLikedResponse;
 import com.vk.api.sdk.queries.likes.LikesAddQuery;
 import com.vk.api.sdk.queries.likes.LikesType;
 import io.qameta.allure.Allure;
@@ -14,35 +16,28 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.util.UUID;
+
 @Test
 public class AddLikeTest extends TestBase {
 
-    private int testNoteItemId;
-
-    @BeforeClass(groups = {"likes.add"})
-    @Step("Create new note for tests")
-    public void createNoteForLike() throws ClientException, ApiException, InterruptedException {
-        super.beforeClass();
-        logger.info("AddLikeTest beforeClass");
-        testNoteItemId = performRequest(vk.notes().add(userActor,
-                "TestNote",
-                "This is note for testing purposes"));
-    }
 
     @DataProvider
     public Object[][] addLikesTestDataProvider() {
         return new Object[][]{
                 {
                         TestData.builder()
-                                .withLikesType(LikesType.NOTE)
-                                .withItemId(testNoteItemId)
-                                .withDescription("Check that current user can like note that was created in BeforeClass method")
+                                .withLikesType(LikesType.POST)
+                                .withItemId(TestData.OPENED_POST_ID)
+                                .withOwnerId(TestData.OPENED_PROFILE_USER_ID)
+                                .withDescription("Check that current user can like post of other user")
                                 .build(),
                 },
                 {
                         TestData.builder()
-                                .withLikesType(LikesType.POST)
-                                .withItemId(testNoteItemId)
+                                .withLikesType(LikesType.PHOTO)
+                                .withItemId(TestData.OPENED_POST_ID)
+                                .withOwnerId(TestData.OPENED_PROFILE_USER_ID)
                                 .withDescription("Pass wrong LikesType to query and validate error message")
                                 .withErrorMessage("One of the parameters specified was missing or invalid (100): One of the parameters specified was missing or invalid: object not found")
                                 .build()
@@ -58,8 +53,8 @@ public class AddLikeTest extends TestBase {
                 {
                         TestData.builder()
                                 .withLikesType(LikesType.PHOTO)
-                                .withItemId(430126411)
-                                .withOwnerId(12438100)
+                                .withItemId(TestData.CLOSED_PHOTO_ID)
+                                .withOwnerId(TestData.PRIVATE_PROFILE_USER_ID)
                                 .withDescription("Try to like photo that closed by privacy settings. Request should fail with expected error message")
                                 .withErrorMessage("Access denied (15): Access denied: this profile is private")
                                 .build()
@@ -73,8 +68,11 @@ public class AddLikeTest extends TestBase {
         Allure.description(testData.getTestDescription());
         LikesAddQuery testQuery = createQuery(testData);
         AddResponse response = testRequest(testQuery, testData);
-        if (response != null){
-            Assert.assertEquals(response.getLikes(), new Integer(1), "Only one like should be added to note");
+        if (response != null) {
+            IsLikedResponse isLiked = performRequest(vk.likes()
+                    .isLiked(userActor, testData.getLikesType(), testData.getItemId())
+                    .ownerId(testData.getOwnerId()));
+            Assert.assertTrue(isLiked.isLiked(), "Test user should like it!");
         }
     }
 

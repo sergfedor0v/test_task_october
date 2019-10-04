@@ -3,6 +3,7 @@ package org.sergfedrv.apitests;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.likes.responses.DeleteResponse;
+import com.vk.api.sdk.objects.likes.responses.IsLikedResponse;
 import com.vk.api.sdk.queries.likes.LikesDeleteQuery;
 import com.vk.api.sdk.queries.likes.LikesType;
 import io.qameta.allure.Allure;
@@ -14,18 +15,14 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.util.UUID;
+
 @Test
 public class DeleteLikeTest extends TestBase {
-    private Integer testNoteItemId;
 
     @BeforeClass(groups = {"likes.delete"})
-    @Step("Like some items just for dislike them in test")
+    @Step("Like opened user post just to delete this like in test")
     public void addLikes() throws ClientException, ApiException, InterruptedException {
-        logger.info("DeleteLikeTest beforeClass");
-        testNoteItemId = performRequest(vk.notes().add(userActor,
-                "TestNote",
-                "This is note for testing purposes"));
-        performRequest(vk.likes().add(userActor, LikesType.NOTE, testNoteItemId));
         performRequest(vk.likes().add(userActor, LikesType.POST, TestData.OPENED_POST_ID).ownerId(TestData.OPENED_PROFILE_USER_ID));
     }
 
@@ -33,18 +30,20 @@ public class DeleteLikeTest extends TestBase {
     public Object[][] deleteLikeTestDataProvider() {
         return new Object[][]{
                 {
-                        TestData.builder()
-                                .withDescription("Check that user can delete like from his own note")
-                                .withItemId(testNoteItemId)
-                                .withLikesType(LikesType.NOTE)
-                                .build()
+                    TestData.builder()
+                        .withDescription("Delete like from post of user with userId " + TestData.OPENED_PROFILE_USER_ID)
+                        .withOwnerId(TestData.OPENED_PROFILE_USER_ID)
+                        .withLikesType(LikesType.POST)
+                        .withItemId(TestData.OPENED_POST_ID)
+                        .build()
                 },
                 {
                         TestData.builder()
-                                .withDescription("Check what if dislike twice")
-                                .withItemId(testNoteItemId)
-                                .withLikesType(LikesType.NOTE)
+                                .withDescription("Delete like from post of user with userId " + TestData.OPENED_PROFILE_USER_ID + " once again")
                                 .withErrorMessage("Access denied (15): Access denied")
+                                .withOwnerId(TestData.OPENED_PROFILE_USER_ID)
+                                .withLikesType(LikesType.POST)
+                                .withItemId(TestData.OPENED_POST_ID)
                                 .build()
                 },
                 {
@@ -80,12 +79,15 @@ public class DeleteLikeTest extends TestBase {
 
     @Test(dataProvider = "deleteLikeTestDataProvider", groups = {"likes.delete"})
     @Description("Check 'likes.delete' API method")
-    public void deleteLikeTest(TestData testData) {
+    public void deleteLikeTest(TestData testData) throws Exception {
         Allure.description(testData.getTestDescription());
         LikesDeleteQuery testQuery = createQuery(testData);
         DeleteResponse response = testRequest(testQuery, testData);
         if (response != null) {
-            Assert.assertEquals(response.getLikes(), new Integer(0), "Only one like should be added to note");
+            IsLikedResponse isLiked = performRequest(vk.likes()
+                    .isLiked(userActor, testData.getLikesType(), testData.getItemId())
+                    .ownerId(testData.getOwnerId()));
+            Assert.assertFalse(isLiked.isLiked(), "Test user should NOT like it!");
         }
     }
 
